@@ -32,7 +32,7 @@ $videoUrl = escapeshellarg($_GET['url']);
 // Hardcoded flags
 $flags = [
     escapeshellarg('-f'),
-    escapeshellarg('bestvideo+bestaudio')
+    escapeshellarg('bv+ba/best') // Use 'bv+ba/best' for best video and audio or best overall format
 ];
 
 // Prepare the yt-dlp command
