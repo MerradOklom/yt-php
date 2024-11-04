@@ -55,6 +55,9 @@ logMessage("Executing command: $command");
 // Execute the command and capture the output URL and error message
 $output = shell_exec($command);
 
+// Log the raw output for debugging purposes
+logMessage("Raw yt-dlp output: $output");
+
 // Handle potential command execution failure
 if ($output === null) {
     logMessage("Error: Command execution failed.");
@@ -83,7 +86,10 @@ if (empty($output)) {
 if (!filter_var($output, FILTER_VALIDATE_URL)) {
     logMessage("Error: Invalid output URL returned: $output");
     header("HTTP/1.1 500 Internal Server Error");
-    echo json_encode(["error" => "Invalid output URL returned."]);
+    echo json_encode([
+        "error" => "Invalid output URL returned.",
+        "raw_output" => $output // Include the raw output for debugging
+    ]);
     ob_end_flush();
     exit();
 }
