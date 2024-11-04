@@ -1,5 +1,5 @@
 <?php
-// Start output buffering
+// Start output buffering at the very beginning to avoid any accidental output
 ob_start();
 
 // Set the log file path
@@ -16,6 +16,7 @@ function logMessage($message) {
 if (empty($_GET)) {
     logMessage("No parameters provided.");
     echo "Nothing to see here.";
+    ob_end_flush(); // Flush the output buffer and send the output
     exit();
 }
 
@@ -24,6 +25,7 @@ if (!isset($_GET['url'])) {
     logMessage("Error: Missing 'url' parameter.");
     header("HTTP/1.1 400 Bad Request");
     echo "Error: Please provide a 'url' parameter.";
+    ob_end_flush(); // Flush the output buffer and send the output
     exit();
 }
 
@@ -51,13 +53,14 @@ if (empty($output)) {
     // Display the error message to the user
     header("HTTP/1.1 500 Internal Server Error");
     echo "Error: Unable to fetch the download URL. <br> Details: " . nl2br(htmlspecialchars($output));
+    ob_end_flush(); // Flush the output buffer and send the output
     exit();
 }
 
 // Log success and redirect to the output URL
 logMessage("Success: Redirecting to $output.");
 
-// Clear the output buffer
+// Clear the output buffer before sending the redirect header
 ob_end_clean();
 
 // Redirect to the output URL
