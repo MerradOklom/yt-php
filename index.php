@@ -29,14 +29,11 @@ if (!isset($_GET['url'])) {
 // Get the video URL from the 'url' query parameter
 $videoUrl = escapeshellarg($_GET['url']);
 
-// Collect all other query parameters as flags
-$flags = [];
-foreach ($_GET as $key => $value) {
-    if ($key !== 'url') { // Skip the 'url' parameter
-        $flags[] = escapeshellarg("--$key");
-        $flags[] = escapeshellarg($value);
-    }
-}
+// Hardcoded flags
+$flags = [
+    escapeshellarg('-f'),
+    escapeshellarg('bestvideo+bestaudio')
+];
 
 // Prepare the yt-dlp command
 $command = 'yt-dlp --get-url ' . implode(' ', $flags) . ' ' . $videoUrl;
@@ -44,7 +41,7 @@ logMessage("Executing command: $command");
 
 // Execute the command and capture the output URL
 $output = shell_exec($command);
-$outputUrl = trim($output);
+$outputUrl = is_string($output) ? trim($output) : '';
 
 // Check if an output URL was returned
 if (empty($outputUrl)) {
