@@ -1,11 +1,19 @@
 <?php
-// Start output buffering at the very beginning to avoid any accidental output
+// Start output buffering
 ob_start();
+
+// Enable detailed error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 // Set the log file path
 $logFile = __DIR__ . '/yt-dlp.log';
+$phpErrorLog = __DIR__ . '/php-error.log';
+ini_set('log_errors', 1);
+ini_set('error_log', $phpErrorLog);
 
-// Logging function with improved locking mechanism to avoid race conditions
+// Logging function
 function logMessage($message) {
     global $logFile;
     $timestamp = date("Y-m-d H:i:s");
@@ -52,17 +60,19 @@ $format = isset($_GET['f']) ? escapeshellarg($_GET['f']) : escapeshellarg('bv+ba
 $command = 'yt-dlp --get-url -f ' . $format . ' ' . $videoUrl . ' 2>&1';
 logMessage("Executing command: $command");
 
-// Execute the command and capture the output URL and error message
+// Execute the command and capture the output and exit status
 $output = shell_exec($command);
+$exitStatus = shell_exec("echo $?");
 
-// Log the raw output for debugging purposes
+// Log the exit status and raw output for debugging purposes
+logMessage("yt-dlp exit status: $exitStatus");
 logMessage("Raw yt-dlp output: $output");
 
 // Handle potential command execution failure
-if ($output === null) {
-    logMessage("Error: Command execution failed.");
+if ($output === null || $exitStatus != 0) {
+    logMessage("Error: Command execution failed or returned non-zero status.");
     header("HTTP/1.1 500 Internal Server Error");
-    echo json_encode(["error" => "Command execution failed."]);
+    echo json_encode(["error" => "Command execution failed.", "details" => $output]);
     ob_end_flush();
     exit();
 }
@@ -88,7 +98,7 @@ if (!filter_var($output, FILTER_VALIDATE_URL)) {
     header("HTTP/1.1 500 Internal Server Error");
     echo json_encode([
         "error" => "Invalid output URL returned.",
-        "raw_output" => $output // Include the raw output for debugging
+        "raw_output" => $output
     ]);
     ob_end_flush();
     exit();
