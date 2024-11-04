@@ -11,6 +11,13 @@ function logMessage($message) {
     file_put_contents($logFile, "[$timestamp] $message" . PHP_EOL, FILE_APPEND);
 }
 
+// Check if any parameters are provided
+if (empty($_GET)) {
+    logMessage("No parameters provided.");
+    echo "Nothing to see here.";
+    exit();
+}
+
 // Check if a 'url' parameter is provided
 if (!isset($_GET['url'])) {
     logMessage("Error: Missing 'url' parameter.");
