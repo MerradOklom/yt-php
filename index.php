@@ -39,6 +39,8 @@ logMessage("Executing command: $command");
 
 // Execute the command and capture the output URL and error message
 $output = shell_exec($command);
+
+// Trim the output and check if it is empty
 $output = is_string($output) ? trim($output) : '';
 
 // Check if an output URL was returned
