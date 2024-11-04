@@ -45,9 +45,18 @@ $outputUrl = is_string($output) ? trim($output) : '';
 
 // Check if an output URL was returned
 if (empty($outputUrl)) {
-    logMessage("Error: yt-dlp failed to fetch the URL for $videoUrl.");
+    // If no output, check for available formats
+    logMessage("Error: yt-dlp failed to fetch the URL for $videoUrl. Checking available formats.");
+    
+    // Command to list formats
+    $formatCommand = 'yt-dlp --list-formats ' . $videoUrl;
+    $formats = shell_exec($formatCommand);
+    
+    // Log the available formats
+    logMessage("Available formats for $videoUrl:\n$formats");
+
     header("HTTP/1.1 500 Internal Server Error");
-    echo "Error: Unable to fetch the download URL.";
+    echo "Error: Unable to fetch the download URL. Check logs for available formats.";
     exit();
 }
 
