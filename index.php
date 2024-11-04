@@ -1,5 +1,6 @@
 <?php
-// index.php
+// Start output buffering
+ob_start();
 
 // Set the log file path
 $logFile = __DIR__ . '/yt-dlp.log';
@@ -53,5 +54,10 @@ if (empty($output)) {
 
 // Log success and redirect to the output URL
 logMessage("Success: Redirecting to $output.");
+
+// Clear the output buffer
+ob_end_clean();
+
+// Redirect to the output URL
 header("Location: " . $output);
 exit();
