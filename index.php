@@ -5,27 +5,40 @@ ob_start();
 // Set the log file path
 $logFile = __DIR__ . '/yt-dlp.log';
 
-// Logging function
+// Logging function with improved locking mechanism to avoid race conditions
 function logMessage($message) {
     global $logFile;
     $timestamp = date("Y-m-d H:i:s");
-    file_put_contents($logFile, "[$timestamp] $message" . PHP_EOL, FILE_APPEND);
+    $logEntry = "[$timestamp] $message" . PHP_EOL;
+    $file = fopen($logFile, 'a');
+    if ($file) {
+        flock($file, LOCK_EX); // Exclusive lock to avoid race conditions
+        fwrite($file, $logEntry);
+        flock($file, LOCK_UN); // Release lock
+        fclose($file);
+    }
+}
+
+// Validate the input URL
+function validateUrl($url) {
+    return filter_var($url, FILTER_VALIDATE_URL) !== false;
 }
 
 // Check if any parameters are provided
 if (empty($_GET)) {
     logMessage("No parameters provided.");
-    echo "Nothing to see here.";
-    ob_end_flush(); // Flush the output buffer and send the output
+    header("HTTP/1.1 400 Bad Request");
+    echo json_encode(["error" => "No parameters provided."]);
+    ob_end_flush();
     exit();
 }
 
 // Check if a 'url' parameter is provided
-if (!isset($_GET['url'])) {
-    logMessage("Error: Missing 'url' parameter.");
+if (!isset($_GET['url']) || !validateUrl($_GET['url'])) {
+    logMessage("Error: Missing or invalid 'url' parameter.");
     header("HTTP/1.1 400 Bad Request");
-    echo "Error: Please provide a 'url' parameter.";
-    ob_end_flush(); // Flush the output buffer and send the output
+    echo json_encode(["error" => "Invalid or missing 'url' parameter."]);
+    ob_end_flush();
     exit();
 }
 
@@ -36,32 +49,48 @@ $videoUrl = escapeshellarg($_GET['url']);
 $format = isset($_GET['f']) ? escapeshellarg($_GET['f']) : escapeshellarg('bv+ba/best');
 
 // Prepare the yt-dlp command
-$command = 'yt-dlp --get-url -f ' . $format . ' ' . $videoUrl . ' 2>&1'; // Redirect stderr to stdout
+$command = 'yt-dlp --get-url -f ' . $format . ' ' . $videoUrl . ' 2>&1';
 logMessage("Executing command: $command");
 
 // Execute the command and capture the output URL and error message
 $output = shell_exec($command);
+
+// Handle potential command execution failure
+if ($output === null) {
+    logMessage("Error: Command execution failed.");
+    header("HTTP/1.1 500 Internal Server Error");
+    echo json_encode(["error" => "Command execution failed."]);
+    ob_end_flush();
+    exit();
+}
 
 // Trim the output and check if it is empty
 $output = is_string($output) ? trim($output) : '';
 
 // Check if an output URL was returned
 if (empty($output)) {
-    // Log the error and output the error message
     logMessage("Error: yt-dlp failed to fetch the URL for $videoUrl. Output:\n$output");
-    
-    // Display the error message to the user
     header("HTTP/1.1 500 Internal Server Error");
-    echo "Error: Unable to fetch the download URL. <br> Details: " . nl2br(htmlspecialchars($output));
-    ob_end_flush(); // Flush the output buffer and send the output
+    echo json_encode([
+        "error" => "Unable to fetch the download URL.",
+        "details" => nl2br(htmlspecialchars($output))
+    ]);
+    ob_end_flush();
+    exit();
+}
+
+// Validate the output URL before redirecting
+if (!filter_var($output, FILTER_VALIDATE_URL)) {
+    logMessage("Error: Invalid output URL returned: $output");
+    header("HTTP/1.1 500 Internal Server Error");
+    echo json_encode(["error" => "Invalid output URL returned."]);
+    ob_end_flush();
     exit();
 }
 
 // Log success and redirect to the output URL
 logMessage("Success: Redirecting to $output.");
-
-// Clear the output buffer before sending the redirect header
-ob_end_clean();
+ob_end_clean(); // Clear the output buffer before sending the redirect header
 
 // Redirect to the output URL
 header("Location: " . $output);
